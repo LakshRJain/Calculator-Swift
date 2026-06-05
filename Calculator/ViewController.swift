@@ -81,8 +81,49 @@ class ViewController: UIViewController {
         feedback.prepare()
         setupUI()
         buildButtons()
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
+        longPress.minimumPressDuration = 0.5
+        displayLabel.isUserInteractionEnabled = true
+        displayLabel.addGestureRecognizer(longPress)
     }
-
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        UIPasteboard.general.string = displayLabel.text
+        
+        // Brief visual feedback
+        UIView.animate(withDuration: 0.15, animations: {
+            self.displayLabel.alpha = 0.3
+        }) { _ in
+            UIView.animate(withDuration: 0.15) {
+                self.displayLabel.alpha = 1.0
+            }
+        }
+        
+        // Show "Copied!" tooltip
+        let toast = UILabel()
+        toast.text = "Copied!"
+        toast.textColor = .white
+        toast.backgroundColor = UIColor.systemGray.withAlphaComponent(0.85)
+        toast.font = .systemFont(ofSize: 14, weight: .medium)
+        toast.textAlignment = .center
+        toast.layer.cornerRadius = 10
+        toast.layer.masksToBounds = true
+        toast.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toast)
+        
+        NSLayoutConstraint.activate([
+            toast.centerXAnchor.constraint(equalTo: displayLabel.centerXAnchor),
+            toast.bottomAnchor.constraint(equalTo: displayLabel.topAnchor, constant: -8),
+            toast.widthAnchor.constraint(equalToConstant: 80),
+            toast.heightAnchor.constraint(equalToConstant: 32)
+        ])
+        
+        UIView.animate(withDuration: 0.3, delay: 1.0, options: [], animations: {
+            toast.alpha = 0
+        }) { _ in
+            toast.removeFromSuperview()
+        }
+    }
     // MARK: - Layout
 
     private func setupUI() {
@@ -119,7 +160,7 @@ class ViewController: UIViewController {
                 let button = UIButton(type: .system)
                 button.setTitle(title, for: .normal)
                 styleButton(button, title: title)
-                button.layer.cornerRadius = 35
+                button.layer.cornerRadius = 40
                 button.layer.masksToBounds = true
                 button.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
                 hStack.addArrangedSubview(button)
@@ -448,16 +489,28 @@ class ViewController: UIViewController {
             button.backgroundColor = UIColor(red: 51/255, green: 51/255, blue: 51/255, alpha: 1)
             button.setTitleColor(.white, for: .normal)
         }
-        button.titleLabel?.font = .systemFont(ofSize: 32, weight: .regular)
+        button.titleLabel?.font = .systemFont(ofSize: 36, weight: .regular)
     }
 
     private func animateButton(_ button: UIButton) {
+        // 1. Create a white overlay matching the button's size and shape
+        let overlay = UIView(frame: button.bounds)
+        overlay.backgroundColor = .white
+        overlay.alpha = 0.0 // Start invisible
+        overlay.layer.cornerRadius = button.layer.cornerRadius
+        overlay.isUserInteractionEnabled = false // Prevent blocking touches
+        
+        button.addSubview(overlay)
+        
         UIView.animate(withDuration: 0.05, animations: {
-            button.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+            overlay.alpha = 0.3
         }) { _ in
-            UIView.animate(withDuration: 0.1) {
-                button.transform = .identity
+            UIView.animate(withDuration: 0.15, delay: 0.05, options: [], animations: {
+                overlay.alpha = 0.0
+            }) { _ in
+                overlay.removeFromSuperview()
             }
         }
     }
+
 }
